@@ -153,25 +153,33 @@ toc: false
 
 ```js
 import * as d3 from "npm:d3";
-const tecnologias = await FileAttachment("data/Internet Accesos Tecnologias Localidades_misiones.csv").csv({typed: true});
-const velocidades = await FileAttachment("data/Internet Accesos Velocidad Localidades_Misiones.csv").csv({typed: true});
+const tecnologias = await FileAttachment("data/Internet Accesos Tecnologias Localidades_misiones.csv").csv();
+const velocidades = await FileAttachment("data/Internet Accesos Velocidad Localidades_Misiones.csv").csv();
 ```
 
 ```js
+// Función para parsear números con punto como separador de miles
+function parseNum(str) {
+  if (!str) return 0;
+  // Eliminar puntos (separador de miles) y convertir coma a punto (decimal)
+  return parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0;
+}
+
 // Métricas principales
-const totalAccesos = d3.sum(tecnologias, d => parseInt(d.Accesos) || 0);
+const totalAccesos = d3.sum(tecnologias, d => parseNum(d.Accesos));
 const totalLocalidades = new Set(tecnologias.map(d => d.Localidad)).size;
 const totalPartidos = new Set(tecnologias.map(d => d.Partido)).size;
 
 const velocidadesFiltradas = velocidades.filter(d => {
-  const vel = parseFloat(d.Velocidad);
-  return vel > 0 && vel < 200 && parseInt(d.Accesos) > 0;
+  const vel = parseNum(d.Velocidad);
+  const acc = parseNum(d.Accesos);
+  return vel > 0 && vel < 200 && acc > 0;
 });
 
-const velocidadPromedio = d3.sum(velocidadesFiltradas, d => parseFloat(d.Velocidad) * parseInt(d.Accesos)) /
-                          d3.sum(velocidadesFiltradas, d => parseInt(d.Accesos));
+const velocidadPromedio = d3.sum(velocidadesFiltradas, d => parseNum(d.Velocidad) * parseNum(d.Accesos)) /
+                          d3.sum(velocidadesFiltradas, d => parseNum(d.Accesos));
 
-const fibraOptica = d3.sum(tecnologias.filter(d => d.Tecnologia === "FIBRA OPTICA"), d => parseInt(d.Accesos) || 0);
+const fibraOptica = d3.sum(tecnologias.filter(d => d.Tecnologia === "FIBRA OPTICA"), d => parseNum(d.Accesos));
 const penetracionFibra = (fibraOptica / totalAccesos * 100);
 ```
 
@@ -251,7 +259,7 @@ const datosFiltrados = tecnologias.filter(d => {
 });
 
 const velocidadesFiltradas2 = velocidades.filter(d => {
-  const vel = parseFloat(d.Velocidad);
+  const vel = parseNum(d.Velocidad);
   const matchPartido = partidoFiltro === "Todos" || d.Partido === partidoFiltro;
   return matchPartido && vel <= rangoVelocidad && vel > 0;
 });
@@ -272,7 +280,7 @@ Este gráfico muestra la participación de mercado de cada tecnología. La fibra
 ```js
 const porTecnologia = d3.rollups(
   datosFiltrados.filter(d => d.Tecnologia && d.Tecnologia !== "Otros"),
-  v => d3.sum(v, d => parseInt(d.Accesos) || 0),
+  v => d3.sum(v, d => parseNum(d.Accesos)),
   d => d.Tecnologia
 ).map(([tecnologia, accesos]) => ({tecnologia, accesos}))
   .sort((a, b) => b.accesos - a.accesos);
@@ -334,13 +342,13 @@ Plot.plot({
 <h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">📊 Top 15 Localidades</h3>
 
 <p class="chart-description">
-Ranking de las 15 localidades con mayor conectividad. Posadas concentra más del 60% de los accesos provinciales, seguida por Oberá y Puerto Iguazú. Esta concentración urbana refleja la desigualdad en infraestructura digital.
+Ranking de las 15 localidades con mayor conectividad. Posadas lidera ampliamente con más de 115 mil accesos (64% del total provincial), seguida por Garupá (13k) y Puerto Iguazú (9k). Esta marcada concentración urbana refleja la desigualdad estructural en infraestructura digital.
 </p>
 
 ```js
 const porLocalidad = d3.rollups(
   datosFiltrados,
-  v => d3.sum(v, d => parseInt(d.Accesos) || 0),
+  v => d3.sum(v, d => parseNum(d.Accesos)),
   d => d.Localidad,
   d => d.Partido
 ).flatMap(([localidad, partidos]) =>
@@ -415,10 +423,10 @@ const rangosVel = [
 ].map(rango => {
   const accesos = d3.sum(
     velocidadesFiltradas2.filter(d => {
-      const vel = parseFloat(d.Velocidad);
+      const vel = parseNum(d.Velocidad);
       return vel >= rango.min && vel < rango.max;
     }),
-    d => parseInt(d.Accesos) || 0
+    d => parseNum(d.Accesos)
   );
   return {
     rango: rango.label,
@@ -490,7 +498,7 @@ Comparación visual de cómo cada tecnología penetra en los principales partido
 ```js
 const tecPorPartido = d3.rollups(
   datosFiltrados.filter(d => d.Tecnologia !== "Otros"),
-  v => d3.sum(v, d => parseInt(d.Accesos) || 0),
+  v => d3.sum(v, d => parseNum(d.Accesos)),
   d => d.Partido,
   d => d.Tecnologia
 ).map(([partido, tecnologias]) => ({
@@ -557,7 +565,7 @@ Matriz interactiva que visualiza la intensidad de cada tecnología por partido u
 ```js
 const matrizPartidoTec = d3.rollups(
   datosFiltrados.filter(d => d.Tecnologia !== "Otros"),
-  v => d3.sum(v, d => parseInt(d.Accesos) || 0),
+  v => d3.sum(v, d => parseNum(d.Accesos)),
   d => d.Partido,
   d => d.Tecnologia
 ).flatMap(([partido, tecnologias]) =>
@@ -623,14 +631,14 @@ Ranking de velocidades promedio por partido calculado con todos los datos dispon
 // Calcular velocidades por partido usando datos completos
 const velPorPartidoCompleto = d3.rollups(
   velocidades.filter(d => {
-    const vel = parseFloat(d.Velocidad);
-    const acc = parseInt(d.Accesos);
+    const vel = parseNum(d.Velocidad);
+    const acc = parseNum(d.Accesos);
     // Filtrar velocidades satelitales anómalas y datos válidos
     return vel > 0 && vel < 200 && acc > 0;
   }),
   v => {
-    const totalPonderado = d3.sum(v, d => parseFloat(d.Velocidad) * parseInt(d.Accesos));
-    const totalAccesos = d3.sum(v, d => parseInt(d.Accesos));
+    const totalPonderado = d3.sum(v, d => parseNum(d.Velocidad) * parseNum(d.Accesos));
+    const totalAccesos = d3.sum(v, d => parseNum(d.Accesos));
     return {
       velPromedio: totalPonderado / totalAccesos,
       totalAccesos: totalAccesos
@@ -697,131 +705,68 @@ Plot.plot({
 
 <div class="chart-card">
 
-<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🗺️ Mapa Geográfico: Principales Localidades</h3>
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">📍 Concentración por Partido</h3>
 
 <p class="chart-description">
-Visualización geográfica de las 10 principales localidades de Misiones. El tamaño de cada burbuja representa la cantidad de accesos a Internet. La posición aproxima la ubicación real: Norte (Puerto Iguazú, Eldorado), Centro (Oberá, Leandro N. Alem) y Sur (Posadas, capital provincial). Esta vista espacial permite identificar concentración urbana y brechas geográficas.
+Ranking de los 10 partidos con mayor cantidad de accesos a Internet. Capital lidera ampliamente con más de 120 mil accesos (principalmente Posadas), seguido por Iguazú y Oberá. Esta distribución refleja la concentración de infraestructura digital en centros urbanos principales.
 </p>
 
 ```js
-// Mapa de coordenadas aproximadas de localidades (basado en geografía real de Misiones)
-const coordenadasLocalidades = {
-  "POSADAS": {x: 50, y: 90, region: "Sur"},
-  "OBERA": {x: 70, y: 50, region: "Centro-Este"},
-  "ELDORADO": {x: 45, y: 25, region: "Norte"},
-  "PUERTO IGUAZU": {x: 60, y: 5, region: "Extremo Norte"},
-  "APOSTOLES": {x: 35, y: 85, region: "Sur-Oeste"},
-  "LEANDRO N. ALEM": {x: 30, y: 40, region: "Centro-Oeste"},
-  "MONTECARLO": {x: 50, y: 20, region: "Norte-Centro"},
-  "SAN VICENTE": {x: 60, y: 55, region: "Centro"},
-  "ARISTOBULO DEL VALLE": {x: 25, y: 50, region: "Centro-Oeste"},
-  "JARDIN AMERICA": {x: 45, y: 75, region: "Sur-Centro"}
-};
-
-const topLocalidadesMapa = d3.rollups(
+const accesosPorPartido = d3.rollups(
   datosFiltrados,
-  v => d3.sum(v, d => parseInt(d.Accesos) || 0),
-  d => d.Localidad
-).map(([localidad, accesos]) => {
-  const coords = coordenadasLocalidades[localidad] || {x: 50, y: 50, region: "Otros"};
-  return {
-    localidad,
-    accesos,
-    x: coords.x,
-    y: coords.y,
-    region: coords.region,
-    porcentaje: (accesos / d3.sum(datosFiltrados, d => parseInt(d.Accesos) || 0)) * 100
-  };
-})
-  .filter(d => d.x !== 50 || d.y !== 50) // Solo mostrar localidades con coordenadas definidas
-  .sort((a, b) => b.accesos - a.accesos);
+  v => d3.sum(v, d => parseNum(d.Accesos)),
+  d => d.Partido
+).map(([partido, accesos]) => ({
+  partido,
+  accesos,
+  porcentaje: (accesos / d3.sum(datosFiltrados, d => parseNum(d.Accesos))) * 100
+}))
+  .sort((a, b) => b.accesos - a.accesos)
+  .slice(0, 10);
 ```
 
 ```js
 Plot.plot({
   height: 450,
-  width: 600,
-  marginTop: 20,
-  marginBottom: 40,
-  marginLeft: 40,
-  marginRight: 40,
+  marginLeft: 140,
+  marginRight: 60,
   style: {
     background: "transparent",
     fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "← Oeste | Este →",
-    domain: [0, 100],
-    ticks: 0
+    label: "Número de Accesos →",
+    grid: false,
+    tickFormat: "~s"
   },
   y: {
-    label: "↑ Norte | Sur ↓",
-    domain: [0, 100],
-    ticks: 0,
-    reverse: true
-  },
-  r: {
-    range: [5, 50]
+    label: null
   },
   color: {
     type: "linear",
-    scheme: "YlOrRd",
-    domain: [0, d3.max(topLocalidadesMapa, d => d.accesos)]
+    scheme: "Greens"
   },
   marks: [
-    // Fondo de provincia (outline aproximado)
-    Plot.line(
-      [
-        {x: 20, y: 10}, {x: 40, y: 5}, {x: 65, y: 10}, {x: 75, y: 30},
-        {x: 80, y: 60}, {x: 70, y: 80}, {x: 50, y: 95}, {x: 30, y: 90},
-        {x: 20, y: 70}, {x: 15, y: 40}, {x: 20, y: 10}
-      ],
-      {
-        x: "x",
-        y: "y",
-        stroke: "#cbd5e0",
-        strokeWidth: 2,
-        strokeDasharray: "4 2",
-        fill: "#f7fafc",
-        fillOpacity: 0.3
-      }
-    ),
-    // Burbujas de localidades
-    Plot.dot(topLocalidadesMapa, {
-      x: "x",
-      y: "y",
-      r: "accesos",
+    Plot.barX(accesosPorPartido, {
+      x: "accesos",
+      y: "partido",
       fill: "accesos",
-      stroke: "white",
-      strokeWidth: 2,
-      opacity: 0.8,
+      sort: {y: "-x"},
       tip: {
         fontSize: 14
       },
-      title: d => `${d.localidad}\n${d.region}\n${d.accesos.toLocaleString()} accesos\n${d.porcentaje.toFixed(1)}% del total`
+      title: d => `${d.partido}\n${d.accesos.toLocaleString()} accesos\n${d.porcentaje.toFixed(1)}% del total`
     }),
-    // Etiquetas de localidades principales
-    Plot.text(topLocalidadesMapa.filter(d => d.accesos > 2000), {
-      x: "x",
-      y: "y",
-      text: d => d.localidad.split(' ').slice(0, 2).join(' '),
+    Plot.text(accesosPorPartido, {
+      x: "accesos",
+      y: "partido",
+      text: d => `${(d.accesos/1000).toFixed(1)}k`,
+      dx: 5,
+      textAnchor: "start",
       fill: "#2d3748",
-      fontSize: d => d.accesos > 20000 ? 13 : 10,
-      fontWeight: "bold",
-      dy: d => d.accesos > 20000 ? -35 : -25,
-      textAnchor: "middle"
-    }),
-    // Anotación de Capital
-    Plot.text([{x: 50, y: 95}], {
-      x: "x",
-      y: "y",
-      text: ["CAPITAL PROVINCIAL"],
-      fill: "#4a5568",
       fontSize: 11,
-      fontWeight: "bold",
-      textAnchor: "middle",
-      dy: 10
+      fontWeight: "bold"
     })
   ]
 })
