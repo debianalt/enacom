@@ -307,7 +307,9 @@ Plot.plot({
       y: "tecnologia",
       fill: "tecnologia",
       sort: {y: "-x"},
-      tip: true,
+      tip: {
+        fontSize: 14
+      },
       title: d => `${d.tecnologia}: ${d.accesos.toLocaleString()} (${(d.accesos/totalTec*100).toFixed(1)}%)`
     }),
     Plot.text(porTecnologia, {
@@ -374,7 +376,9 @@ Plot.plot({
       y: "localidad",
       fill: "accesos",
       sort: {y: "-x"},
-      tip: true
+      tip: {
+        fontSize: 14
+      }
     }),
     Plot.text(porLocalidad, {
       x: "accesos",
@@ -449,7 +453,9 @@ Plot.plot({
       x: "rango",
       y: "accesos",
       fill: "rango",
-      tip: true
+      tip: {
+        fontSize: 14
+      }
     }),
     Plot.text(rangosVel, {
       x: "rango",
@@ -529,7 +535,9 @@ Plot.plot({
       y: "partido",
       fill: "tecnologia",
       sort: {y: "-x", reduce: "sum"},
-      tip: true
+      tip: {
+        fontSize: 14
+      }
     })
   ]
 })
@@ -585,7 +593,9 @@ Plot.plot({
       y: "partido",
       fill: "accesos",
       inset: 0.5,
-      tip: true,
+      tip: {
+        fontSize: 14
+      },
       title: d => `${d.partido} - ${d.tecnologia}\n${d.accesos.toLocaleString()} accesos`
     })
   ]
@@ -605,21 +615,29 @@ Plot.plot({
 <h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">📈 Velocidad Promedio por Partido</h3>
 
 <p class="chart-description">
-Ranking de velocidades promedio por partido. Capital lidera con más de 80 Mbps gracias a alta penetración de fibra. La brecha entre Capital y partidos rurales supera 50 Mbps, evidenciando desigualdad en calidad de servicio.
+Ranking de velocidades promedio por partido calculado con todos los datos disponibles. Capital (Posadas) lidera con la mayor velocidad promedio gracias a su alta penetración de fibra óptica. La brecha entre partidos urbanos y rurales refleja desigualdades en infraestructura digital.
 </p>
 
 ```js
-const velPorPartido = d3.rollups(
-  velocidadesFiltradas2,
+// Calcular velocidades por partido usando datos completos
+const velPorPartidoCompleto = d3.rollups(
+  velocidades.filter(d => {
+    const vel = parseFloat(d.Velocidad);
+    const acc = parseInt(d.Accesos);
+    // Filtrar velocidades satelitales anómalas y datos válidos
+    return vel > 0 && vel < 200 && acc > 0;
+  }),
   v => {
-    const velPromedio = d3.sum(v, d => parseFloat(d.Velocidad) * parseInt(d.Accesos)) /
-                        d3.sum(v, d => parseInt(d.Accesos));
+    const totalPonderado = d3.sum(v, d => parseFloat(d.Velocidad) * parseInt(d.Accesos));
     const totalAccesos = d3.sum(v, d => parseInt(d.Accesos));
-    return {velPromedio, totalAccesos};
+    return {
+      velPromedio: totalPonderado / totalAccesos,
+      totalAccesos: totalAccesos
+    };
   },
   d => d.Partido
 ).map(([partido, datos]) => ({partido, ...datos}))
-  .filter(d => d.totalAccesos > 100)
+  .filter(d => d.totalAccesos > 500) // Solo partidos con datos significativos
   .sort((a, b) => b.velPromedio - a.velPromedio)
   .slice(0, 15);
 ```
@@ -631,7 +649,7 @@ Plot.plot({
   marginRight: 60,
   style: {
     background: "transparent",
-    fontSize: "11px",
+    fontSize: "13px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
@@ -647,22 +665,28 @@ Plot.plot({
     domain: [0, 100]
   },
   marks: [
-    Plot.barX(velPorPartido, {
+    Plot.barX(velPorPartidoCompleto, {
       x: "velPromedio",
       y: "partido",
       fill: "velPromedio",
       sort: {y: "-x"},
-      tip: true,
-      title: d => `${d.partido}\n${d.velPromedio.toFixed(0)} Mbps\n${d.totalAccesos.toLocaleString()} accesos`
+      tip: {
+        fontSize: 14,
+        format: {
+          x: d => `${d.toFixed(1)} Mbps`,
+          y: true
+        }
+      }
     }),
-    Plot.text(velPorPartido, {
+    Plot.text(velPorPartidoCompleto, {
       x: "velPromedio",
       y: "partido",
-      text: d => `${d.velPromedio.toFixed(0)} Mbps`,
+      text: d => `${d.velPromedio.toFixed(1)} Mbps`,
       dx: 5,
       textAnchor: "start",
       fill: "#2d3748",
-      fontSize: 10
+      fontSize: 11,
+      fontWeight: "bold"
     })
   ]
 })
@@ -672,80 +696,88 @@ Plot.plot({
 
 <div class="chart-card">
 
-<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🎯 Concentración: Top 10 Localidades</h3>
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🎯 Participación: Top 10 Localidades</h3>
 
 <p class="chart-description">
-Gráfico de burbujas que visualiza las 10 localidades con mayor número de accesos. El tamaño de cada círculo es proporcional al volumen. Posadas es un outlier masivo, concentrando más accesos que las siguientes 9 localidades combinadas.
+Treemap que visualiza la participación de las 10 principales localidades en el total provincial. El tamaño de cada rectángulo es proporcional al número de accesos. Posadas domina con más del 60% del total, evidenciando la concentración urbana extrema de la conectividad.
 </p>
 
 ```js
-const topLocalidadesBubble = d3.rollups(
+const topLocalidadesTreemap = d3.rollups(
   datosFiltrados,
   v => d3.sum(v, d => parseInt(d.Accesos) || 0),
   d => d.Localidad
-).map(([localidad, accesos]) => ({localidad, accesos}))
+).map(([localidad, accesos]) => ({
+  localidad,
+  accesos,
+  porcentaje: (accesos / d3.sum(datosFiltrados, d => parseInt(d.Accesos) || 0)) * 100
+}))
   .sort((a, b) => b.accesos - a.accesos)
-  .slice(0, 10)
-  .map((d, i) => ({
-    ...d,
-    x: (i % 5) * 100 + 50,
-    y: Math.floor(i / 5) * 100 + 50
-  }));
+  .slice(0, 10);
 ```
 
 ```js
 Plot.plot({
   height: 450,
-  marginTop: 20,
-  marginBottom: 20,
+  marginTop: 5,
+  marginBottom: 5,
+  marginLeft: 5,
+  marginRight: 5,
   style: {
     background: "transparent",
-    fontSize: "11px",
+    fontSize: "13px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
+  marks: [
+    Plot.cell(topLocalidadesTreemap, {
+      x: (d, i) => i % 5,
+      y: (d, i) => Math.floor(i / 5),
+      fill: "accesos",
+      stroke: "white",
+      strokeWidth: 3,
+      inset: 0.5,
+      tip: {
+        fontSize: 14,
+        format: {
+          x: false,
+          y: false,
+          fill: false
+        }
+      },
+      title: d => `${d.localidad}\n${d.accesos.toLocaleString()} accesos\n${d.porcentaje.toFixed(1)}% del total`
+    }),
+    Plot.text(topLocalidadesTreemap, {
+      x: (d, i) => i % 5,
+      y: (d, i) => Math.floor(i / 5),
+      text: d => d.porcentaje > 5 ? d.localidad : "",
+      fill: "white",
+      fontSize: d => d.porcentaje > 40 ? 16 : 12,
+      fontWeight: "bold",
+      dy: -8
+    }),
+    Plot.text(topLocalidadesTreemap, {
+      x: (d, i) => i % 5,
+      y: (d, i) => Math.floor(i / 5),
+      text: d => d.porcentaje > 5 ? `${d.porcentaje.toFixed(1)}%` : "",
+      fill: "white",
+      fontSize: d => d.porcentaje > 40 ? 14 : 11,
+      dy: 8
+    })
+  ],
   x: {
-    label: null,
-    domain: [0, 500],
-    axis: null
+    axis: null,
+    domain: [-0.5, 4.5]
   },
   y: {
-    label: null,
-    domain: [0, 200],
-    axis: null
+    axis: null,
+    domain: [-0.5, 1.5],
+    reverse: true
   },
   color: {
     type: "linear",
-    scheme: "Purples"
-  },
-  marks: [
-    Plot.dot(topLocalidadesBubble, {
-      x: "x",
-      y: "y",
-      r: d => Math.sqrt(d.accesos) / 3,
-      fill: "accesos",
-      fillOpacity: 0.8,
-      stroke: "white",
-      strokeWidth: 2,
-      tip: true,
-      title: d => `${d.localidad}\n${d.accesos.toLocaleString()} accesos`
-    }),
-    Plot.text(topLocalidadesBubble, {
-      x: "x",
-      y: "y",
-      text: d => d.accesos > 10000 ? d.localidad : "",
-      fill: "white",
-      fontSize: 11,
-      fontWeight: "bold"
-    }),
-    Plot.text(topLocalidadesBubble, {
-      x: "x",
-      y: d => d.y + 15,
-      text: d => (d.accesos / 1000).toFixed(0) + "k",
-      fill: "#2d3748",
-      fontSize: 10,
-      fontWeight: "bold"
-    })
-  ]
+    scheme: "Purples",
+    domain: [0, d3.max(topLocalidadesTreemap, d => d.accesos)]
+  }
 })
 ```
 
