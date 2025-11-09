@@ -5,12 +5,13 @@ toc: false
 
 <style>
 .dashboard-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
   color: white;
   padding: 3rem 2rem;
   margin: -1rem -1rem 2rem -1rem;
   border-radius: 0 0 20px 20px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  text-align: center;
 }
 
 .dashboard-header h1 {
@@ -42,7 +43,7 @@ toc: false
 .metric-value {
   font-size: 3rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -94,7 +95,7 @@ toc: false
   line-height: 1.6;
   margin-bottom: 1.5rem;
   padding-left: 1rem;
-  border-left: 3px solid #667eea;
+  border-left: 3px solid #4a5568;
 }
 
 .filter-section {
@@ -286,11 +287,11 @@ Plot.plot({
   marginRight: 80,
   style: {
     background: "transparent",
-    fontSize: "12px",
+    fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "Accesos →",
+    label: "Número de Accesos →",
     grid: false,
     tickFormat: "~s"
   },
@@ -355,11 +356,11 @@ Plot.plot({
   height: 350,
   style: {
     background: "transparent",
-    fontSize: "11px",
+    fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "Accesos →",
+    label: "Número de Accesos →",
     grid: false,
     tickFormat: "~s"
   },
@@ -433,14 +434,14 @@ Plot.plot({
   marginBottom: 50,
   style: {
     background: "transparent",
-    fontSize: "12px",
+    fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "Rango Mbps →"
+    label: "Rango de Velocidad (Mbps) →"
   },
   y: {
-    label: "↑ Accesos",
+    label: "↑ Cantidad de Accesos",
     grid: false,
     tickFormat: "~s"
   },
@@ -513,11 +514,11 @@ Plot.plot({
   marginBottom: 80,
   style: {
     background: "transparent",
-    fontSize: "11px",
+    fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "Accesos →",
+    label: "Número de Accesos →",
     grid: false,
     tickFormat: "~s"
   },
@@ -571,15 +572,15 @@ Plot.plot({
   marginBottom: 80,
   style: {
     background: "transparent",
-    fontSize: "10px",
+    fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: null,
+    label: "Tecnología →",
     tickRotate: -45
   },
   y: {
-    label: null
+    label: "↑ Partido"
   },
   color: {
     type: "log",
@@ -649,7 +650,7 @@ Plot.plot({
   marginRight: 60,
   style: {
     background: "transparent",
-    fontSize: "13px",
+    fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
@@ -696,88 +697,133 @@ Plot.plot({
 
 <div class="chart-card">
 
-<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🎯 Participación: Top 10 Localidades</h3>
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🗺️ Mapa Geográfico: Principales Localidades</h3>
 
 <p class="chart-description">
-Treemap que visualiza la participación de las 10 principales localidades en el total provincial. El tamaño de cada rectángulo es proporcional al número de accesos. Posadas domina con más del 60% del total, evidenciando la concentración urbana extrema de la conectividad.
+Visualización geográfica de las 10 principales localidades de Misiones. El tamaño de cada burbuja representa la cantidad de accesos a Internet. La posición aproxima la ubicación real: Norte (Puerto Iguazú, Eldorado), Centro (Oberá, Leandro N. Alem) y Sur (Posadas, capital provincial). Esta vista espacial permite identificar concentración urbana y brechas geográficas.
 </p>
 
 ```js
-const topLocalidadesTreemap = d3.rollups(
+// Mapa de coordenadas aproximadas de localidades (basado en geografía real de Misiones)
+const coordenadasLocalidades = {
+  "POSADAS": {x: 50, y: 90, region: "Sur"},
+  "OBERA": {x: 70, y: 50, region: "Centro-Este"},
+  "ELDORADO": {x: 45, y: 25, region: "Norte"},
+  "PUERTO IGUAZU": {x: 60, y: 5, region: "Extremo Norte"},
+  "APOSTOLES": {x: 35, y: 85, region: "Sur-Oeste"},
+  "LEANDRO N. ALEM": {x: 30, y: 40, region: "Centro-Oeste"},
+  "MONTECARLO": {x: 50, y: 20, region: "Norte-Centro"},
+  "SAN VICENTE": {x: 60, y: 55, region: "Centro"},
+  "ARISTOBULO DEL VALLE": {x: 25, y: 50, region: "Centro-Oeste"},
+  "JARDIN AMERICA": {x: 45, y: 75, region: "Sur-Centro"}
+};
+
+const topLocalidadesMapa = d3.rollups(
   datosFiltrados,
   v => d3.sum(v, d => parseInt(d.Accesos) || 0),
   d => d.Localidad
-).map(([localidad, accesos]) => ({
-  localidad,
-  accesos,
-  porcentaje: (accesos / d3.sum(datosFiltrados, d => parseInt(d.Accesos) || 0)) * 100
-}))
-  .sort((a, b) => b.accesos - a.accesos)
-  .slice(0, 10);
+).map(([localidad, accesos]) => {
+  const coords = coordenadasLocalidades[localidad] || {x: 50, y: 50, region: "Otros"};
+  return {
+    localidad,
+    accesos,
+    x: coords.x,
+    y: coords.y,
+    region: coords.region,
+    porcentaje: (accesos / d3.sum(datosFiltrados, d => parseInt(d.Accesos) || 0)) * 100
+  };
+})
+  .filter(d => d.x !== 50 || d.y !== 50) // Solo mostrar localidades con coordenadas definidas
+  .sort((a, b) => b.accesos - a.accesos);
 ```
 
 ```js
 Plot.plot({
   height: 450,
-  marginTop: 5,
-  marginBottom: 5,
-  marginLeft: 5,
-  marginRight: 5,
+  width: 600,
+  marginTop: 20,
+  marginBottom: 40,
+  marginLeft: 40,
+  marginRight: 40,
   style: {
     background: "transparent",
-    fontSize: "13px",
+    fontSize: "14px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
-  marks: [
-    Plot.cell(topLocalidadesTreemap, {
-      x: (d, i) => i % 5,
-      y: (d, i) => Math.floor(i / 5),
-      fill: "accesos",
-      stroke: "white",
-      strokeWidth: 3,
-      inset: 0.5,
-      tip: {
-        fontSize: 14,
-        format: {
-          x: false,
-          y: false,
-          fill: false
-        }
-      },
-      title: d => `${d.localidad}\n${d.accesos.toLocaleString()} accesos\n${d.porcentaje.toFixed(1)}% del total`
-    }),
-    Plot.text(topLocalidadesTreemap, {
-      x: (d, i) => i % 5,
-      y: (d, i) => Math.floor(i / 5),
-      text: d => d.porcentaje > 5 ? d.localidad : "",
-      fill: "white",
-      fontSize: d => d.porcentaje > 40 ? 16 : 12,
-      fontWeight: "bold",
-      dy: -8
-    }),
-    Plot.text(topLocalidadesTreemap, {
-      x: (d, i) => i % 5,
-      y: (d, i) => Math.floor(i / 5),
-      text: d => d.porcentaje > 5 ? `${d.porcentaje.toFixed(1)}%` : "",
-      fill: "white",
-      fontSize: d => d.porcentaje > 40 ? 14 : 11,
-      dy: 8
-    })
-  ],
   x: {
-    axis: null,
-    domain: [-0.5, 4.5]
+    label: "← Oeste | Este →",
+    domain: [0, 100],
+    ticks: 0
   },
   y: {
-    axis: null,
-    domain: [-0.5, 1.5],
+    label: "↑ Norte | Sur ↓",
+    domain: [0, 100],
+    ticks: 0,
     reverse: true
+  },
+  r: {
+    range: [5, 50]
   },
   color: {
     type: "linear",
-    scheme: "Purples",
-    domain: [0, d3.max(topLocalidadesTreemap, d => d.accesos)]
-  }
+    scheme: "YlOrRd",
+    domain: [0, d3.max(topLocalidadesMapa, d => d.accesos)]
+  },
+  marks: [
+    // Fondo de provincia (outline aproximado)
+    Plot.line(
+      [
+        {x: 20, y: 10}, {x: 40, y: 5}, {x: 65, y: 10}, {x: 75, y: 30},
+        {x: 80, y: 60}, {x: 70, y: 80}, {x: 50, y: 95}, {x: 30, y: 90},
+        {x: 20, y: 70}, {x: 15, y: 40}, {x: 20, y: 10}
+      ],
+      {
+        x: "x",
+        y: "y",
+        stroke: "#cbd5e0",
+        strokeWidth: 2,
+        strokeDasharray: "4 2",
+        fill: "#f7fafc",
+        fillOpacity: 0.3
+      }
+    ),
+    // Burbujas de localidades
+    Plot.dot(topLocalidadesMapa, {
+      x: "x",
+      y: "y",
+      r: "accesos",
+      fill: "accesos",
+      stroke: "white",
+      strokeWidth: 2,
+      opacity: 0.8,
+      tip: {
+        fontSize: 14
+      },
+      title: d => `${d.localidad}\n${d.region}\n${d.accesos.toLocaleString()} accesos\n${d.porcentaje.toFixed(1)}% del total`
+    }),
+    // Etiquetas de localidades principales
+    Plot.text(topLocalidadesMapa.filter(d => d.accesos > 2000), {
+      x: "x",
+      y: "y",
+      text: d => d.localidad.split(' ').slice(0, 2).join(' '),
+      fill: "#2d3748",
+      fontSize: d => d.accesos > 20000 ? 13 : 10,
+      fontWeight: "bold",
+      dy: d => d.accesos > 20000 ? -35 : -25,
+      textAnchor: "middle"
+    }),
+    // Anotación de Capital
+    Plot.text([{x: 50, y: 95}], {
+      x: "x",
+      y: "y",
+      text: ["CAPITAL PROVINCIAL"],
+      fill: "#4a5568",
+      fontSize: 11,
+      fontWeight: "bold",
+      textAnchor: "middle",
+      dy: 10
+    })
+  ]
 })
 ```
 
