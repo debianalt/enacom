@@ -1,0 +1,12 @@
+{
+  "name": "enacom-misiones-analysis",
+  "version": "1.0.0",
+  "description": "Análisis de conectividad de ENACOM para la provincia de Misiones",
+  "scripts": {
+    "dev": "observable preview",
+    "build": "observable build"
+  },
+  "devDependencies": {
+    "@observablehq/framework": "latest"
+  }
+}
