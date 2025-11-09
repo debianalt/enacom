@@ -48,3 +48,10 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Observable Framework
+node_modules/
+.observablehq/cache/
+dist/
+.observablehq/
+.env
