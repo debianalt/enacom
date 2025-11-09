@@ -71,11 +71,6 @@ toc: false
   color: #155724;
 }
 
-.metric-change.negative {
-  background: #f8d7da;
-  color: #721c24;
-}
-
 .chart-card {
   background: white;
   border-radius: 16px;
@@ -83,6 +78,7 @@ toc: false
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   border: 1px solid rgba(0,0,0,0.05);
   margin-bottom: 2rem;
+  height: 100%;
 }
 
 .chart-title {
@@ -236,7 +232,7 @@ const tecnologiaFiltro = view(
 ```js
 const rangoVelocidad = view(
   Inputs.range([0, 300], {
-    label: "⚡ Rango de Velocidad (Mbps)",
+    label: "⚡ Velocidad Máxima (Mbps)",
     step: 10,
     value: 300
   })
@@ -262,14 +258,14 @@ const velocidadesFiltradas2 = velocidades.filter(d => {
 
 ---
 
-<div class="grid-2">
+<div class="grid-3">
 
 <div class="chart-card">
 
-### 🎯 Distribución de Tecnologías
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🎯 Distribución de Tecnologías</h3>
 
 <p class="chart-description">
-Este gráfico de dona interactivo muestra la participación de mercado de cada tecnología de acceso. La fibra óptica y cable módem dominan el mercado con más del 80% de los accesos, mientras que tecnologías heredadas como ADSL están en decline. Pasa el mouse sobre cada segmento para ver detalles.
+Este gráfico muestra la participación de mercado de cada tecnología. La fibra óptica domina el mercado, seguida por CABLEMODEM. Las tecnologías heredadas como ADSL están en decline, mientras que WIRELESS y SATELITAL cubren zonas rurales.
 </p>
 
 ```js
@@ -285,30 +281,45 @@ const totalTec = d3.sum(porTecnologia, d => d.accesos);
 
 ```js
 Plot.plot({
-  height: 400,
+  height: 350,
+  marginLeft: 120,
+  marginRight: 80,
   style: {
     background: "transparent",
-    fontSize: "13px",
+    fontSize: "12px",
     fontFamily: "system-ui, -apple-system, sans-serif"
+  },
+  x: {
+    label: "Accesos →",
+    grid: false,
+    tickFormat: "~s"
+  },
+  y: {
+    label: null
   },
   color: {
     domain: porTecnologia.map(d => d.tecnologia),
     range: ["#667eea", "#764ba2", "#f093fb", "#4facfe", "#43e97b", "#fa709a"]
   },
   marks: [
-    Plot.cell(
-      porTecnologia.flatMap(d =>
-        Array(Math.round(d.accesos / 100)).fill(d)
-      ),
-      Plot.stackY({
-        x: () => "Tecnologías",
-        fill: "tecnologia",
-        insetTop: 0.5,
-        insetBottom: 0.5,
-        tip: true,
-        title: d => `${d.tecnologia}: ${d.accesos.toLocaleString()} accesos (${(d.accesos/totalTec*100).toFixed(1)}%)`
-      })
-    )
+    Plot.barX(porTecnologia, {
+      x: "accesos",
+      y: "tecnologia",
+      fill: "tecnologia",
+      sort: {y: "-x"},
+      tip: true,
+      title: d => `${d.tecnologia}: ${d.accesos.toLocaleString()} (${(d.accesos/totalTec*100).toFixed(1)}%)`
+    }),
+    Plot.text(porTecnologia, {
+      x: "accesos",
+      y: "tecnologia",
+      text: d => `${(d.accesos/totalTec*100).toFixed(1)}%`,
+      dx: 5,
+      textAnchor: "start",
+      fill: "#2d3748",
+      fontSize: 11,
+      fontWeight: "bold"
+    })
   ]
 })
 ```
@@ -317,10 +328,10 @@ Plot.plot({
 
 <div class="chart-card">
 
-### 📊 Top 15 Localidades
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">📊 Top 15 Localidades</h3>
 
 <p class="chart-description">
-Visualización horizontal de las 15 localidades con mayor número de accesos a Internet. Posadas lidera con más del 60% de la conectividad provincial, evidenciando la concentración urbana. Las barras están coloreadas según el volumen de accesos para facilitar la identificación de patrones.
+Ranking de las 15 localidades con mayor conectividad. Posadas concentra más del 60% de los accesos provinciales, seguida por Oberá y Puerto Iguazú. Esta concentración urbana refleja la desigualdad en infraestructura digital.
 </p>
 
 ```js
@@ -337,16 +348,16 @@ const porLocalidad = d3.rollups(
 
 ```js
 Plot.plot({
-  marginLeft: 140,
-  marginRight: 80,
-  height: 400,
+  marginLeft: 120,
+  marginRight: 60,
+  height: 350,
   style: {
     background: "transparent",
-    fontSize: "12px",
+    fontSize: "11px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "Número de accesos →",
+    label: "Accesos →",
     grid: false,
     tickFormat: "~s"
   },
@@ -371,8 +382,83 @@ Plot.plot({
       text: d => d.accesos.toLocaleString(),
       dx: 5,
       textAnchor: "start",
-      fill: "#666",
-      fontSize: 10
+      fill: "#2d3748",
+      fontSize: 9
+    })
+  ]
+})
+```
+
+</div>
+
+<div class="chart-card">
+
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">⚡ Distribución de Velocidades</h3>
+
+<p class="chart-description">
+Gráfico de barras que muestra cómo se distribuyen los accesos según rangos de velocidad. Observamos dos picos: uno en bajas velocidades (infraestructura limitada) y otro en altas velocidades (centros urbanos con fibra óptica).
+</p>
+
+```js
+const rangosVel = [
+  {min: 0, max: 6, label: "< 6"},
+  {min: 6, max: 20, label: "6-20"},
+  {min: 20, max: 50, label: "20-50"},
+  {min: 50, max: 100, label: "50-100"},
+  {min: 100, max: 300, label: "100-300"},
+  {min: 300, max: Infinity, label: "≥300"}
+].map(rango => {
+  const accesos = d3.sum(
+    velocidadesFiltradas2.filter(d => {
+      const vel = parseFloat(d.Velocidad);
+      return vel >= rango.min && vel < rango.max;
+    }),
+    d => parseInt(d.Accesos) || 0
+  );
+  return {
+    rango: rango.label,
+    accesos
+  };
+}).filter(d => d.accesos > 0);
+```
+
+```js
+Plot.plot({
+  height: 350,
+  marginLeft: 60,
+  marginBottom: 50,
+  style: {
+    background: "transparent",
+    fontSize: "12px",
+    fontFamily: "system-ui, -apple-system, sans-serif"
+  },
+  x: {
+    label: "Rango Mbps →"
+  },
+  y: {
+    label: "↑ Accesos",
+    grid: false,
+    tickFormat: "~s"
+  },
+  color: {
+    domain: rangosVel.map(d => d.rango),
+    range: ["#e74c3c", "#e67e22", "#f39c12", "#3498db", "#2ecc71", "#27ae60"]
+  },
+  marks: [
+    Plot.barY(rangosVel, {
+      x: "rango",
+      y: "accesos",
+      fill: "rango",
+      tip: true
+    }),
+    Plot.text(rangosVel, {
+      x: "rango",
+      y: "accesos",
+      text: d => (d.accesos/1000).toFixed(0) + "k",
+      dy: -8,
+      fill: "#2d3748",
+      fontSize: 10,
+      fontWeight: "bold"
     })
   ]
 })
@@ -388,147 +474,62 @@ Plot.plot({
 
 <div class="chart-card">
 
-### 🌐 Relación Tecnología vs Velocidad
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🌐 Accesos por Tecnología y Partido</h3>
 
 <p class="chart-description">
-Scatter plot que correlaciona el número de tecnologías disponibles en cada localidad con su velocidad promedio. Las localidades con mayor diversidad tecnológica tienden a tener mejores velocidades, evidenciando que la competencia mejora la calidad del servicio. El tamaño de cada burbuja representa el volumen total de accesos.
+Comparación visual de cómo cada tecnología penetra en los principales partidos. Capital lidera en fibra óptica, mientras que partidos rurales como Guaraní dependen más de wireless. Los colores agrupados facilitan identificar patrones de adopción tecnológica regional.
 </p>
 
 ```js
-const tecVsVel = d3.rollups(
-  tecnologias,
-  v => {
-    const localidad = v[0].Localidad;
-    const partido = v[0].Partido;
-    const numTecnologias = new Set(v.filter(x => x.Tecnologia !== "Otros").map(d => d.Tecnologia)).size;
-    const totalAccesos = d3.sum(v, d => parseInt(d.Accesos) || 0);
-
-    const velData = velocidades.filter(vd => vd.Localidad === localidad);
-    const velPromedio = velData.length > 0
-      ? d3.sum(velData.filter(vd => parseFloat(vd.Velocidad) < 200), vd => parseFloat(vd.Velocidad) * parseInt(vd.Accesos)) /
-        d3.sum(velData.filter(vd => parseFloat(vd.Velocidad) < 200), vd => parseInt(vd.Accesos))
-      : 0;
-
-    return {
-      localidad,
-      partido,
-      numTecnologias,
-      velPromedio: velPromedio || 0,
-      totalAccesos
-    };
-  },
-  d => d.Localidad
-).map(([_, datos]) => datos)
-  .filter(d => d.totalAccesos > 100 && d.velPromedio > 0);
+const tecPorPartido = d3.rollups(
+  datosFiltrados.filter(d => d.Tecnologia !== "Otros"),
+  v => d3.sum(v, d => parseInt(d.Accesos) || 0),
+  d => d.Partido,
+  d => d.Tecnologia
+).map(([partido, tecnologias]) => ({
+  partido,
+  tecnologias: tecnologias.map(([tec, acc]) => ({tecnologia: tec, accesos: acc})),
+  total: d3.sum(tecnologias, ([_, acc]) => acc)
+}))
+.sort((a, b) => b.total - a.total)
+.slice(0, 10)
+.flatMap(d => d.tecnologias.map(t => ({
+  partido: d.partido,
+  tecnologia: t.tecnologia,
+  accesos: t.accesos
+})));
 ```
 
 ```js
 Plot.plot({
-  height: 400,
-  marginLeft: 60,
-  marginRight: 20,
+  height: 450,
+  marginLeft: 140,
+  marginBottom: 80,
   style: {
     background: "transparent",
-    fontSize: "12px",
+    fontSize: "11px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "Número de tecnologías disponibles →",
-    domain: [0, 8],
-    grid: true
+    label: "Accesos →",
+    grid: false,
+    tickFormat: "~s"
   },
   y: {
-    label: "↑ Velocidad promedio (Mbps)",
-    grid: true
-  },
-  color: {
-    type: "linear",
-    scheme: "Viridis",
-    legend: true,
-    label: "Total accesos"
-  },
-  marks: [
-    Plot.dot(tecVsVel, {
-      x: "numTecnologias",
-      y: "velPromedio",
-      r: d => Math.sqrt(d.totalAccesos) / 10,
-      fill: "totalAccesos",
-      fillOpacity: 0.7,
-      stroke: "#667eea",
-      strokeWidth: 1.5,
-      tip: true,
-      title: d => `${d.localidad}\n${d.numTecnologias} tecnologías\n${d.velPromedio.toFixed(0)} Mbps\n${d.totalAccesos.toLocaleString()} accesos`
-    }),
-    Plot.linearRegressionY(tecVsVel, {
-      x: "numTecnologias",
-      y: "velPromedio",
-      stroke: "#e74c3c",
-      strokeWidth: 2,
-      strokeDasharray: "5,5"
-    })
-  ]
-})
-```
-
-</div>
-
-<div class="chart-card">
-
-### 📦 Distribución de Velocidades (Box Plot)
-
-<p class="chart-description">
-Box plot comparativo que muestra la distribución estadística de velocidades por tecnología. La caja representa el rango intercuartil (50% de los datos), la línea central es la mediana, y los puntos externos son outliers. La fibra óptica presenta la mayor mediana y menor variabilidad, indicando consistencia en el servicio.
-</p>
-
-```js
-const velPorTecnologia = velocidades
-  .filter(d => {
-    const vel = parseFloat(d.Velocidad);
-    const acc = parseInt(d.Accesos);
-    return vel > 0 && vel < 200 && acc > 0 && d.Tecnologia !== "Otros";
-  })
-  .flatMap(d => {
-    const vel = parseFloat(d.Velocidad);
-    const acc = Math.min(parseInt(d.Accesos), 100); // Limitar para performance
-    return Array(acc).fill({
-      tecnologia: d.Tecnologia,
-      velocidad: vel
-    });
-  });
-
-const tecPrincipales = ["FIBRA OPTICA", "CABLEMODEM", "WIRELESS", "ADSL", "SATELITAL"];
-const velFiltered = velPorTecnologia.filter(d => tecPrincipales.includes(d.tecnologia));
-```
-
-```js
-Plot.plot({
-  height: 400,
-  marginLeft: 120,
-  marginBottom: 60,
-  style: {
-    background: "transparent",
-    fontSize: "12px",
-    fontFamily: "system-ui, -apple-system, sans-serif"
-  },
-  x: {
     label: null
   },
-  y: {
-    label: "↑ Velocidad (Mbps)",
-    grid: true
-  },
   color: {
-    domain: tecPrincipales,
-    range: ["#667eea", "#764ba2", "#f093fb", "#4facfe", "#fa709a"]
+    domain: ["FIBRA OPTICA", "CABLEMODEM", "WIRELESS", "ADSL", "SATELITAL"],
+    range: ["#667eea", "#764ba2", "#f093fb", "#4facfe", "#fa709a"],
+    legend: true
   },
   marks: [
-    Plot.boxY(velFiltered, {
-      x: "tecnologia",
-      y: "velocidad",
+    Plot.barX(tecPorPartido, {
+      x: "accesos",
+      y: "partido",
       fill: "tecnologia",
-      fillOpacity: 0.6,
-      stroke: "#2d3748",
-      strokeWidth: 1.5
+      sort: {y: "-x", reduce: "sum"},
+      tip: true
     })
   ]
 })
@@ -536,16 +537,12 @@ Plot.plot({
 
 </div>
 
-</div>
-
----
-
 <div class="chart-card">
 
-### 🗺️ Mapa de Calor: Accesos por Partido y Tecnología
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🗺️ Mapa de Calor: Tecnología por Partido</h3>
 
 <p class="chart-description">
-Matriz interactiva que visualiza la penetración de cada tecnología en los partidos de Misiones. Los colores más intensos indican mayor concentración de accesos. Este heatmap revela patrones geográficos: Capital y Oberá muestran fuerte adopción de fibra óptica, mientras que zonas rurales dependen más de wireless y satelital. Ideal para identificar brechas de infraestructura.
+Matriz interactiva que visualiza la intensidad de cada tecnología por partido usando escala logarítmica. Los tonos más oscuros indican mayor concentración. Perfecta para detectar brechas: zonas grises tienen poca o nula cobertura de esa tecnología.
 </p>
 
 ```js
@@ -556,17 +553,17 @@ const matrizPartidoTec = d3.rollups(
   d => d.Tecnologia
 ).flatMap(([partido, tecnologias]) =>
   tecnologias.map(([tecnologia, accesos]) => ({partido, tecnologia, accesos}))
-).filter(d => d.accesos > 10);
+).filter(d => d.accesos > 5);
 ```
 
 ```js
 Plot.plot({
-  height: 500,
-  marginLeft: 180,
-  marginBottom: 100,
+  height: 450,
+  marginLeft: 140,
+  marginBottom: 80,
   style: {
     background: "transparent",
-    fontSize: "11px",
+    fontSize: "10px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
@@ -580,7 +577,7 @@ Plot.plot({
     type: "log",
     scheme: "Blues",
     legend: true,
-    label: "Accesos (escala logarítmica)"
+    label: "Accesos (log)"
   },
   marks: [
     Plot.cell(matrizPartidoTec, {
@@ -597,73 +594,75 @@ Plot.plot({
 
 </div>
 
+</div>
+
 ---
 
 <div class="grid-2">
 
 <div class="chart-card">
 
-### ⚡ Evolución de Velocidades
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">📈 Velocidad Promedio por Partido</h3>
 
 <p class="chart-description">
-Gráfico de área que muestra la distribución acumulada de accesos por rango de velocidad. Observamos una curva bimodal: un primer pico en velocidades bajas (< 20 Mbps) representando zonas con infraestructura limitada, y un segundo pico en altas velocidades (> 100 Mbps) en centros urbanos. Esta visualización destaca la brecha digital en calidad de servicio.
+Ranking de velocidades promedio por partido. Capital lidera con más de 80 Mbps gracias a alta penetración de fibra. La brecha entre Capital y partidos rurales supera 50 Mbps, evidenciando desigualdad en calidad de servicio.
 </p>
 
 ```js
-const rangosVel = d3.range(0, 201, 10).map(minVel => {
-  const accesos = d3.sum(
-    velocidadesFiltradas2.filter(d => {
-      const vel = parseFloat(d.Velocidad);
-      return vel >= minVel && vel < minVel + 10;
-    }),
-    d => parseInt(d.Accesos) || 0
-  );
-  return {
-    velocidad: minVel + 5,
-    accesos
-  };
-}).filter(d => d.accesos > 0);
+const velPorPartido = d3.rollups(
+  velocidadesFiltradas2,
+  v => {
+    const velPromedio = d3.sum(v, d => parseFloat(d.Velocidad) * parseInt(d.Accesos)) /
+                        d3.sum(v, d => parseInt(d.Accesos));
+    const totalAccesos = d3.sum(v, d => parseInt(d.Accesos));
+    return {velPromedio, totalAccesos};
+  },
+  d => d.Partido
+).map(([partido, datos]) => ({partido, ...datos}))
+  .filter(d => d.totalAccesos > 100)
+  .sort((a, b) => b.velPromedio - a.velPromedio)
+  .slice(0, 15);
 ```
 
 ```js
 Plot.plot({
-  height: 400,
-  marginLeft: 60,
+  height: 450,
+  marginLeft: 140,
+  marginRight: 60,
   style: {
     background: "transparent",
-    fontSize: "12px",
+    fontSize: "11px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
-    label: "Velocidad (Mbps) →",
-    grid: true
+    label: "Velocidad Promedio (Mbps) →",
+    grid: false
   },
   y: {
-    label: "↑ Número de accesos",
-    grid: true,
-    tickFormat: "~s"
+    label: null
+  },
+  color: {
+    type: "linear",
+    scheme: "RdYlGn",
+    domain: [0, 100]
   },
   marks: [
-    Plot.areaY(rangosVel, {
-      x: "velocidad",
-      y: "accesos",
-      fill: "url(#gradient)",
-      fillOpacity: 0.7,
-      curve: "catmull-rom"
+    Plot.barX(velPorPartido, {
+      x: "velPromedio",
+      y: "partido",
+      fill: "velPromedio",
+      sort: {y: "-x"},
+      tip: true,
+      title: d => `${d.partido}\n${d.velPromedio.toFixed(0)} Mbps\n${d.totalAccesos.toLocaleString()} accesos`
     }),
-    Plot.lineY(rangosVel, {
-      x: "velocidad",
-      y: "accesos",
-      stroke: "#667eea",
-      strokeWidth: 3,
-      curve: "catmull-rom"
-    }),
-    Plot.dot(rangosVel, {
-      x: "velocidad",
-      y: "accesos",
-      fill: "#764ba2",
-      r: 4,
-      tip: true
+    Plot.text(velPorPartido, {
+      x: "velPromedio",
+      y: "partido",
+      text: d => `${d.velPromedio.toFixed(0)} Mbps`,
+      dx: 5,
+      textAnchor: "start",
+      fill: "#2d3748",
+      fontSize: 10
     })
   ]
 })
@@ -673,86 +672,77 @@ Plot.plot({
 
 <div class="chart-card">
 
-### 🎯 Penetración por Partido (Top 10)
+<h3 style="color: #2d3748; font-weight: 700; margin-bottom: 0.5rem;">🎯 Concentración: Top 10 Localidades</h3>
 
 <p class="chart-description">
-Gráfico radial (spider/radar chart simulado) que compara los 10 partidos con mayor número de accesos. Este formato permite identificar rápidamente outliers: Capital domina significativamente, seguido por Oberá e Iguazú. La forma del polígono revela la concentración urbana de la conectividad provincial.
+Gráfico de burbujas que visualiza las 10 localidades con mayor número de accesos. El tamaño de cada círculo es proporcional al volumen. Posadas es un outlier masivo, concentrando más accesos que las siguientes 9 localidades combinadas.
 </p>
 
 ```js
-const topPartidos = d3.rollups(
+const topLocalidadesBubble = d3.rollups(
   datosFiltrados,
   v => d3.sum(v, d => parseInt(d.Accesos) || 0),
-  d => d.Partido
-).map(([partido, accesos]) => ({partido, accesos}))
+  d => d.Localidad
+).map(([localidad, accesos]) => ({localidad, accesos}))
   .sort((a, b) => b.accesos - a.accesos)
-  .slice(0, 10);
-
-const maxAccesos = d3.max(topPartidos, d => d.accesos);
-const radarData = topPartidos.map((d, i) => ({
-  partido: d.partido,
-  accesos: d.accesos,
-  angle: (i / topPartidos.length) * 2 * Math.PI,
-  radius: (d.accesos / maxAccesos) * 150
-}));
+  .slice(0, 10)
+  .map((d, i) => ({
+    ...d,
+    x: (i % 5) * 100 + 50,
+    y: Math.floor(i / 5) * 100 + 50
+  }));
 ```
 
 ```js
 Plot.plot({
-  height: 400,
+  height: 450,
   marginTop: 20,
-  marginBottom: 80,
+  marginBottom: 20,
   style: {
     background: "transparent",
-    fontSize: "12px",
+    fontSize: "11px",
     fontFamily: "system-ui, -apple-system, sans-serif"
   },
   x: {
     label: null,
-    domain: [-180, 180]
+    domain: [0, 500],
+    axis: null
   },
   y: {
     label: null,
-    domain: [-180, 180]
+    domain: [0, 200],
+    axis: null
+  },
+  color: {
+    type: "linear",
+    scheme: "Purples"
   },
   marks: [
-    // Círculos de referencia
-    Plot.circle([50, 100, 150], {
-      x: 0,
-      y: 0,
-      r: d => d,
-      stroke: "#e2e8f0",
-      strokeWidth: 1,
-      fill: "none"
-    }),
-    // Líneas radiales
-    Plot.line(radarData, {
-      x: d => d.radius * Math.cos(d.angle - Math.PI/2),
-      y: d => d.radius * Math.sin(d.angle - Math.PI/2),
-      stroke: "#667eea",
-      strokeWidth: 3,
-      fill: "#667eea",
-      fillOpacity: 0.2,
-      curve: "linear-closed"
-    }),
-    // Puntos
-    Plot.dot(radarData, {
-      x: d => d.radius * Math.cos(d.angle - Math.PI/2),
-      y: d => d.radius * Math.sin(d.angle - Math.PI/2),
-      r: 8,
-      fill: "#764ba2",
+    Plot.dot(topLocalidadesBubble, {
+      x: "x",
+      y: "y",
+      r: d => Math.sqrt(d.accesos) / 3,
+      fill: "accesos",
+      fillOpacity: 0.8,
       stroke: "white",
       strokeWidth: 2,
       tip: true,
-      title: d => `${d.partido}: ${d.accesos.toLocaleString()} accesos`
+      title: d => `${d.localidad}\n${d.accesos.toLocaleString()} accesos`
     }),
-    // Labels
-    Plot.text(radarData, {
-      x: d => (d.radius + 20) * Math.cos(d.angle - Math.PI/2),
-      y: d => (d.radius + 20) * Math.sin(d.angle - Math.PI/2),
-      text: "partido",
-      fontSize: 10,
+    Plot.text(topLocalidadesBubble, {
+      x: "x",
+      y: "y",
+      text: d => d.accesos > 10000 ? d.localidad : "",
+      fill: "white",
+      fontSize: 11,
+      fontWeight: "bold"
+    }),
+    Plot.text(topLocalidadesBubble, {
+      x: "x",
+      y: d => d.y + 15,
+      text: d => (d.accesos / 1000).toFixed(0) + "k",
       fill: "#2d3748",
+      fontSize: 10,
       fontWeight: "bold"
     })
   ]
@@ -770,7 +760,7 @@ Plot.plot({
   <ul>
     <li><strong>Concentración Urbana:</strong> Posadas concentra ${((porLocalidad[0]?.accesos || 0) / totalAccesos * 100).toFixed(1)}% de los accesos provinciales.</li>
     <li><strong>Migración Tecnológica:</strong> Fibra óptica representa ${penetracionFibra.toFixed(1)}% del mercado, superando tecnologías heredadas.</li>
-    <li><strong>Brecha Digital:</strong> Existe correlación positiva entre diversidad tecnológica y velocidades promedio.</li>
+    <li><strong>Brecha Digital:</strong> La diferencia de velocidad entre Capital y partidos rurales supera los 50 Mbps.</li>
     <li><strong>Desigualdad Regional:</strong> Los 3 partidos principales concentran más del 75% de la conectividad.</li>
   </ul>
 </div>
