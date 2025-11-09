@@ -1,12 +1,13 @@
 export default {
-  title: "Análisis ENACOM Misiones",
+  title: "ENACOM Misiones",
   pages: [
-    {name: "Análisis de Conectividad", path: "/"},
+    {name: "Conectividad", path: "/"},
     {name: "Tecnologías", path: "/tecnologias"},
     {name: "Velocidades", path: "/velocidades"}
   ],
-  theme: "air",
-  header: "Análisis de Conectividad ENACOM - Provincia de Misiones",
-  footer: "Datos obtenidos de ENACOM Argentina",
-  toc: true
+  theme: "light",
+  header: "",
+  footer: "Fuente: ENACOM Argentina",
+  toc: true,
+  style: "observablehq:default.css"
 };
